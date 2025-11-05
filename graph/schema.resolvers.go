@@ -7,11 +7,40 @@ package graph
 import (
 	"context"
 	"fmt"
+
+	"github.com/Emilia-Poleszak/Token_Transfer_API/models"
+	
+	"gorm.io/gorm"
 )
 
 // Transfer is the resolver for the transfer field.
-func (r *mutationResolver) Transfer(ctx context.Context, fromAddress string, toAddress string, amount int32) (int32, error) {
-	panic(fmt.Errorf("not implemented: Transfer - transfer"))
+func (r *mutationResolver) Transfer(ctx context.Context, from_address string, to_address string, amount int32) (int32, error) {
+	var fromWallet, toWallet models.Wallet
+	
+	if err := r.DB.Where("address = ?", from_address).First(&fromWallet).Error; err != nil {
+		return 0, fmt.Errorf("From wallet not found")
+	}
+	
+	if err := r.DB.Where("address = ?", to_address).First(&toWallet).Error; err != nil {
+		return 0, fmt.Errorf("To wallet not found")
+	}
+	
+	if fromWallet.Balance < amount {
+		return 0, fmt.Errorf("Insufficient balance")
+	}
+
+	fromWallet.Balance -= amount
+	toWallet.Balance += amount
+
+	if err := r.DB.Save(&fromWallet).Error; err != nil {
+		return 0, fmt.Errorf("From wallet update failed")
+	}
+	
+	if err := r.DB.Save(&toWallet).Error; err != nil {
+		return 0, fmt.Errorf("To wallet update failed")
+	}
+
+	return fromWallet.Balance, nil
 }
 
 // Mutation returns MutationResolver implementation.

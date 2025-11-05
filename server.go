@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"gorm.io/gorm"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
@@ -12,6 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/graph"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/models"
+	"github.com/Emilia-Poleszak/Token_Transfer_API/db"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -22,6 +25,9 @@ func main() {
 	if port == "" {
 		port = defaultPort
 	}
+
+	var DB *gorm.DB = db.ConnectDB()
+	DB.AutoMigrate(&models.Wallet{})
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
 

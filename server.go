@@ -11,6 +11,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/graph"
+	"github.com/Emilia-Poleszak/Token_Transfer_API/models"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 

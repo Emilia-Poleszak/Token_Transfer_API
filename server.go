@@ -27,9 +27,21 @@ func main() {
 	}
 
 	var DB *gorm.DB = db.ConnectDB()
-	DB.AutoMigrate(&models.Wallet{})
+	if err := DB.AutoMigrate(&models.Wallet{}); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
 
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	var count int64
+	if err := DB.Model(&models.Wallet{}).Where("address = ?", "0x0000000000000000000000000000000000000000").Count(&count).Error; err != nil {
+		log.Fatalf("Count query failed: %v", err)
+	}
+	
+	// Create a default wallet if database is empty
+	if count == 0 {
+		DB.Create(&models.Wallet{Address: "0x0000000000000000000000000000000000000000", Balance: 1000000})
+	}
+	
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{DB: DB}}))
 
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})

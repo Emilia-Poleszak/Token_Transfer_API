@@ -51,3 +51,24 @@ func TestSingleAcceptedTransfer(t *testing.T) {
 	assert.NoError(t, DB.Where("address = ?", fromWallet.Address).Delete(&updatedFromWallet).Error, "Cleanup failed")
 	assert.NoError(t, DB.Where("address = ?", toWallet.Address).Delete(&updatedToWallet).Error, "Cleanup failed")
 }	
+
+func TestSingleRejectedTransfer(t *testing.T) {
+	DB := setupTestDB(t)
+	fromWallet, toWallet := CreateTestWallets(DB, t)
+	resolver := &graph.Resolver{DB: DB}
+	amount := int32(1000)
+
+	_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet.Address, amount)
+	assert.Error(t, err, "Transfer should fail")
+	assert.Contains(t, err.Error(), "Insufficient balance")
+
+	var updatedFromWallet, updatedToWallet models.Wallet
+	DB.Where("address = ?", fromWallet.Address).First(&updatedFromWallet)
+	DB.Where("address = ?", toWallet.Address).First(&updatedToWallet)
+
+	assert.Equal(t, int32(800), updatedFromWallet.Balance)
+	assert.Equal(t, int32(300), updatedToWallet.Balance)
+
+	assert.NoError(t, DB.Where("address = ?", fromWallet.Address).Delete(&updatedFromWallet).Error, "Cleanup failed")
+	assert.NoError(t, DB.Where("address = ?", toWallet.Address).Delete(&updatedToWallet).Error, "Cleanup failed")
+}

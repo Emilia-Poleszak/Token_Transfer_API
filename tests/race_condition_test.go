@@ -19,9 +19,9 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	}
 
 	fromWallet := models.Wallet{Address: "0xfrom_address", Balance: int32(10)}
-	toWallet1 := models.Wallet{Address: "0xto_address1", Balance: int32(0)}
-	toWallet2 := models.Wallet{Address: "0xto_address2", Balance: int32(0)}
-	toWallet3 := models.Wallet{Address: "0xto_address3", Balance: int32(0)}
+	toWallet1 := models.Wallet{Address: "0xto_address1", Balance: int32(10)}
+	toWallet2 := models.Wallet{Address: "0xto_address2", Balance: int32(10)}
+	toWallet3 := models.Wallet{Address: "0xto_address3", Balance: int32(10)}
 
 	assert.NoError(t, DB.Create(&fromWallet).Error, "Creating from wallet failed")
 	assert.NoError(t, DB.Create(&toWallet1).Error, "Creating to wallet 1 failed")
@@ -48,7 +48,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		ready.Done()
 		start.Wait()
 
-		_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet1.Address, 1)
+		_, err := resolver.Mutation().Transfer(context.Background(), toWallet1.Address, fromWallet.Address, 1)
 		
 		if err == nil {
 			result += " +1 accepted "
@@ -65,7 +65,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		ready.Done()
 		start.Wait()
 
-		_, err := resolver.Mutation().Transfer(context.Background(), toWallet2.Address, fromWallet.Address, 4)
+		_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet2.Address, 4)
 		
 		if err == nil {
 			result += " -4 accepted "
@@ -81,7 +81,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		ready.Done()
 		start.Wait()
 
-		_, err := resolver.Mutation().Transfer(context.Background(), toWallet1.Address, fromWallet.Address, 7)
+		_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet3.Address, 7)
 		
 		if err == nil {
 			result += " -7 accepted "

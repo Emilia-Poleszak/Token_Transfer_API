@@ -40,8 +40,8 @@ func main() {
 	if count == 0 {
 		DB.Create(&models.Wallet{Address: "0x0000000000000000000000000000000000000000", Balance: 1000000})
 	}
-
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{DB: DB}}))
 
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})

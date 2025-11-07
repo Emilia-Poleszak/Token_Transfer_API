@@ -105,13 +105,13 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	assert.GreaterOrEqual(t, updatedFromWallet.Balance, int32(0), "From wallet balance should not be negative")
 	assert.LessOrEqual(t, updatedFromWallet.Balance, int32(10), "From wallet balance should not exceed initial balance")
 	
-	DB.Where("address = ?", fromWallet.Address).Delete(&updatedFromWallet)
-	DB.Where("address = ?", toWallet1.Address).Delete(&updatedToWallet1)
-	DB.Where("address = ?", toWallet2.Address).Delete(&updatedToWallet2)
-	DB.Where("address = ?", toWallet3.Address).Delete(&updatedToWallet3)
+	DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{})
+	DB.Unscoped().Where("address = ?", updatedToWallet1.Address).Delete(&models.Wallet{})
+	DB.Unscoped().Where("address = ?", updatedToWallet2.Address).Delete(&models.Wallet{})
+	DB.Unscoped().Where("address = ?", updatedToWallet3.Address).Delete(&models.Wallet{})
 
-	assert.Error(t, DB.Where("address = ?", updatedFromWallet).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet1).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet2).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet3).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedFromWallet.Address).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedToWallet1.Address).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedToWallet2.Address).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedToWallet3.Address).First(&models.Wallet{}).Error, "Cleanup failed")	
 }

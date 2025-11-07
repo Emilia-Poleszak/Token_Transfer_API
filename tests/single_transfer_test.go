@@ -48,11 +48,11 @@ func TestSingleAcceptedTransfer(t *testing.T) {
 	assert.Equal(t, updatedFromWallet.Balance, int32(700), "From wallet balance incorrect")
 	assert.Equal(t, updatedToWallet.Balance, int32(400), "To wallet balance incorrect")
 	
-	DB.Where("address = ?", fromWallet.Address).Delete(&updatedFromWallet)
-	DB.Where("address = ?", toWallet.Address).Delete(&updatedToWallet)
+	DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{})
+	DB.Unscoped().Where("address = ?", updatedToWallet.Address).Delete(&models.Wallet{})
 
-	assert.Error(t, DB.Where("address = ?", updatedFromWallet).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedFromWallet.Address).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedToWallet.Address).First(&models.Wallet{}).Error, "Cleanup failed")
 }	
 
 func TestSingleRejectedTransfer(t *testing.T) {
@@ -72,9 +72,9 @@ func TestSingleRejectedTransfer(t *testing.T) {
 	assert.Equal(t, int32(800), updatedFromWallet.Balance)
 	assert.Equal(t, int32(300), updatedToWallet.Balance)
 
-	DB.Where("address = ?", fromWallet.Address).Delete(&updatedFromWallet)
-	DB.Where("address = ?", toWallet.Address).Delete(&updatedToWallet)
+	DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{})
+	DB.Unscoped().Where("address = ?", updatedToWallet.Address).Delete(&models.Wallet{})
 
-	assert.Error(t, DB.Where("address = ?", updatedFromWallet).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedFromWallet.Address).First(&models.Wallet{}).Error, "Cleanup failed")
+	assert.Error(t, DB.Where("address = ?", updatedToWallet.Address).First(&models.Wallet{}).Error, "Cleanup failed")
 }

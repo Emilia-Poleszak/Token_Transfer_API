@@ -43,24 +43,20 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		_ = DB.First(&models.Wallet{}, "address = ?", fromWallet.Address)
-
 		ready.Done()
 		start.Wait()
 
 		_, err := resolver.Mutation().Transfer(context.Background(), toWallet1.Address, fromWallet.Address, 1)
 		
 		if err == nil {
-			result += " +1 accepted "
+			result += " +1 accepted,"
 		} else {
-			result += " +1 rejected "
+			result += " +1 rejected,"
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-
-		_ = DB.First(&models.Wallet{}, "address = ?", fromWallet.Address)
 
 		ready.Done()
 		start.Wait()
@@ -68,15 +64,13 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet2.Address, 4)
 		
 		if err == nil {
-			result += " -4 accepted "
+			result += " -4 accepted,"
 		} else {
-			result += " -4 rejected "
+			result += " -4 rejected,"
 		}
 	}()
 	go func() {
 		defer wg.Done()
-
-		_ = DB.First(&models.Wallet{}, "address = ?", fromWallet.Address)
 
 		ready.Done()
 		start.Wait()
@@ -84,9 +78,9 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet3.Address, 7)
 		
 		if err == nil {
-			result += " -7 accepted "
+			result += " -7 accepted,"
 		} else {
-			result += " -7 rejected "
+			result += " -7 rejected,"
 		}
 	}()
 
@@ -94,7 +88,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	start.Done()
 	wg.Wait()
 
-	t.Logf("Transfers result: %s", result)
+	t.Logf("\nTransfers result:%s", result)
 
 	var updatedFromWallet, updatedToWallet1, updatedToWallet2, updatedToWallet3 models.Wallet
 	DB.Where("address = ?", fromWallet.Address).First(&updatedFromWallet)
@@ -105,13 +99,6 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	assert.GreaterOrEqual(t, updatedFromWallet.Balance, int32(0), "From wallet balance should not be negative")
 	assert.LessOrEqual(t, updatedFromWallet.Balance, int32(10), "From wallet balance should not exceed initial balance")
 	
-	DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{})
-	DB.Unscoped().Where("address = ?", updatedToWallet1.Address).Delete(&models.Wallet{})
-	DB.Unscoped().Where("address = ?", updatedToWallet2.Address).Delete(&models.Wallet{})
-	DB.Unscoped().Where("address = ?", updatedToWallet3.Address).Delete(&models.Wallet{})
-
-	assert.Error(t, DB.Where("address = ?", updatedFromWallet.Address).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet1.Address).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet2.Address).First(&models.Wallet{}).Error, "Cleanup failed")
-	assert.Error(t, DB.Where("address = ?", updatedToWallet3.Address).First(&models.Wallet{}).Error, "Cleanup failed")	
+	err2 := DB.Unscoped().Where("1=1").Delete(&models.Wallet{}).Error; 
+	assert.NoError(t, err2)
 }

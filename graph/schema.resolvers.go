@@ -16,68 +16,60 @@ import (
 
 
 func (r *mutationResolver) Transfer(ctx context.Context, from_address string, to_address string, amount int32) (int32, error) {
+	var from_wallet_balance int32
+	
 	if amount <= 0 {
 		return 0, fmt.Errorf("Invalid amount: must be > 0.")
 	}
 
-	tx := r.DB.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return 0, fmt.Errorf("Transaction start failed: %w", tx.Error)
-	}
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	
+		var fromWallet, toWallet models.Wallet
 
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("address = ?", from_address).First(&fromWallet).Error; err != nil {
+			
+			if err == gorm.ErrRecordNotFound {
+				return fmt.Errorf("From wallet not found")
+			} else {
+				return fmt.Errorf("Error fetching from wallet: %w", err)
+			}
 		}
-	}()
 
-	var fromWallet, toWallet models.Wallet
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("address = ?", to_address).First(&toWallet).Error; err != nil {
+			
+			if err == gorm.ErrRecordNotFound {
+				toWallet = models.Wallet{Address: to_address, Balance: 0}
 
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("address = ?", from_address).First(&fromWallet).Error; err != nil {
-		tx.Rollback()
-		
-		if err == gorm.ErrRecordNotFound {
-			return 0, fmt.Errorf("From wallet not found")
+				if err := tx.Create(&toWallet).Error; err != nil {
+					return fmt.Errorf("Failed to create to wallet: %w", err)
+				}
+			} else {
+				return fmt.Errorf("Error fetching to wallet: %w", err)
+			}
 		}
-		
-		return 0, fmt.Errorf("Error fetching from wallet: %w", err)
-	}
 
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("address = ?", to_address).First(&toWallet).Error; err != nil {
-		tx.Rollback()
-		
-		if err == gorm.ErrRecordNotFound {
-			return 0, fmt.Errorf("To wallet not found")
+		if fromWallet.Balance < amount {
+			return fmt.Errorf("Insufficient balance")
 		}
-		
-		return 0, fmt.Errorf("Error fetching to wallet: %w", err)
-	}
 
-	if fromWallet.Balance < amount {
-		tx.Rollback()
-		return 0, fmt.Errorf("Insufficient balance")
-	}
+		fromWallet.Balance -= amount
+		toWallet.Balance += amount
 
-	fromWallet.Balance -= amount
-	toWallet.Balance += amount
+		if err := tx.Save(&fromWallet).Error; err != nil {
+			return fmt.Errorf("From wallet update failed: %w", err)
+		}
 
-	if err := tx.Save(&fromWallet).Error; err != nil {
-		tx.Rollback()
-		return 0, fmt.Errorf("From wallet update failed: %w", err)
-	}
+		if err := tx.Save(&toWallet).Error; err != nil {
+			return fmt.Errorf("To wallet update failed: %w", err)
+		}
 
-	if err := tx.Save(&toWallet).Error; err != nil {
-		tx.Rollback()
-		return 0, fmt.Errorf("To wallet update failed: %w", err)
-	}
+		from_wallet_balance = fromWallet.Balance
+		return nil
+	})
 
-	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
-		return 0, fmt.Errorf("Transaction failed: %w", err)
-	}
-
-	return fromWallet.Balance, nil
+	return from_wallet_balance, err
 }
 
 

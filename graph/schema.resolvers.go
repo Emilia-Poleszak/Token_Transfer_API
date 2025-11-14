@@ -25,29 +25,43 @@ func (r *mutationResolver) Transfer(ctx context.Context, from_address string, to
 	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 	
 		var fromWallet, toWallet models.Wallet
+		first, second := from_address, to_address
+		reversed := false
+		var wallets []models.Wallet
+
+		// Use consistent ordering to prevent deadlocks	
+		if second < first{
+			first, second = second, first
+			reversed = true
+		} 
 
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("address = ?", from_address).First(&fromWallet).Error; err != nil {
-			
-			if err == gorm.ErrRecordNotFound {
-				return fmt.Errorf("From wallet not found")
-			} else {
-				return fmt.Errorf("Error fetching from wallet: %w", err)
-			}
+		Where("address IN ?", []string{first, second}).
+		Order("address").
+		Find(&wallets).Error; err != nil {
+			return fmt.Errorf("Error fetching wallets: %w", err)
 		}
 
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("address = ?", to_address).First(&toWallet).Error; err != nil {
-			
-			if err == gorm.ErrRecordNotFound {
-				toWallet = models.Wallet{Address: to_address, Balance: 0}
+		if reversed {
+			fromWallet, toWallet = wallets[1], wallets[0]
+		} else {
+			fromWallet, toWallet = wallets[0], wallets[1]
+		}
 
-				if err := tx.Create(&toWallet).Error; err != nil {
-					return fmt.Errorf("Failed to create to wallet: %w", err)
-				}
-			} else {
-				return fmt.Errorf("Error fetching to wallet: %w", err)
+		if errorNotFound := tx.Where("address = ?", from_address).First(&models.Wallet{}).Error; errorNotFound == gorm.ErrRecordNotFound {
+			return fmt.Errorf("From wallet not found")
+		}
+
+		errorNotFound2 := tx.Where("address = ?", to_address).First(&models.Wallet{}).Error
+		
+		if errorNotFound2 == gorm.ErrRecordNotFound {
+			toWallet = models.Wallet{Address: to_address, Balance: 0}
+			
+			if err := tx.Create(&toWallet).Error; err != nil {
+				return fmt.Errorf("Error creating to wallet: %w", err)
 			}
+		} else if errorNotFound2 != nil {
+			return fmt.Errorf("Error fetching to wallet: %w", errorNotFound2)
 		}
 
 		if fromWallet.Balance < amount {

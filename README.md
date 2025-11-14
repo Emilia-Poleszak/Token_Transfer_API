@@ -17,7 +17,7 @@ docker compose -f docker-compose.yml up --build
 After local changes restart the container. 
 First make sure to open Docker Desktop. Then use:
 ```
-docker compose restart app
+docker compose up -d --build
 ```
 
 ### Tests

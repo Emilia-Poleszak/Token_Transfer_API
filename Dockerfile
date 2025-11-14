@@ -5,8 +5,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o server .
+
+RUN curl -o /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
+    && chmod +x /wait-for-it.sh
+
+RUN go build -o /tmp/server .
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "go build -o /tmp/server . && /tmp/server"]
+CMD ["/wait-for-it.sh", "db:5432", "--timeout=30", "--", "/tmp/server"]

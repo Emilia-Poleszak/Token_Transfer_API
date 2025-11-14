@@ -66,7 +66,6 @@ func TestSingleRejectedTransfer(t *testing.T) {
 
 	assert.Equal(t, fromWallet.Balance, int32(800), "Initial from wallet balance incorrect")
 	assert.Equal(t, toWallet.Balance, int32(300), "Initial to wallet balance incorrect")
-
 	_, err := resolver.Mutation().Transfer(context.Background(), fromWallet.Address, toWallet.Address, amount)
 	assert.Error(t, err, "Transfer should fail")
 	assert.Contains(t, err.Error(), "Insufficient balance")

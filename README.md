@@ -14,9 +14,15 @@ in termianal and use:
 docker compose -f docker-compose.yml up --build
 ```
 
+After local changes restart the container. 
+First make sure to open Docker Desktop. Then use:
+```
+docker compose restart app
+```
+
 ### Tests
 
-To run tests make sure to build and runcontainers first. 
+To run tests make sure to start containers first. 
 Then open main project directory and use:
 ```
 docker compose exec app go test -v ./tests

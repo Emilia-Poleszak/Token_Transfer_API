@@ -9,8 +9,6 @@ COPY . .
 RUN curl -o /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
     && chmod +x /wait-for-it.sh
 
-RUN go build -o /tmp/server .
-
 EXPOSE 8080
 
-CMD ["/wait-for-it.sh", "db:5432", "--timeout=30", "--", "/tmp/server"]
+CMD ["/wait-for-it.sh", "db:5432", "--timeout=30", "--", "go", "run", "server.go"]

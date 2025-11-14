@@ -51,6 +51,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		if err == nil {
 			result += " +1 accepted,"
 		} else {
+			t.Logf("Error in +1 transfer: %v", err)
 			result += " +1 rejected,"
 		}
 	}()
@@ -66,6 +67,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		if err == nil {
 			result += " -4 accepted,"
 		} else {
+			t.Logf("Error in -4 transfer: %v", err)
 			result += " -4 rejected,"
 		}
 	}()
@@ -80,6 +82,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		if err == nil {
 			result += " -7 accepted,"
 		} else {
+			t.Logf("Error in -7 transfer: %v", err)
 			result += " -7 rejected,"
 		}
 	}()
@@ -99,6 +102,16 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	assert.GreaterOrEqual(t, updatedFromWallet.Balance, int32(0), "From wallet balance should not be negative")
 	assert.LessOrEqual(t, updatedFromWallet.Balance, int32(10), "From wallet balance should not exceed initial balance")
 	
-	err2 := DB.Unscoped().Where("1=1").Delete(&models.Wallet{}).Error; 
+	assert.Equal(t, updatedToWallet1.Balance, int32(9), "To wallet 1 balance incorrect")
+	assert.True(t, updatedToWallet2.Balance == int32(10) || updatedToWallet2.Balance == int32(14), "To wallet 2 balance incorrect")
+	assert.True(t, updatedToWallet3.Balance == int32(10) || updatedToWallet3.Balance == int32(17), "To wallet 3 balance incorrect")
+
+	err2 := DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{}).Error; 
 	assert.NoError(t, err2)
+	err3 := DB.Unscoped().Where("address = ?", updatedToWallet1.Address).Delete(&models.Wallet{}).Error;
+	assert.NoError(t, err3)
+	err4 := DB.Unscoped().Where("address = ?", updatedToWallet2.Address).Delete(&models.Wallet{}).Error;
+	assert.NoError(t, err4)
+	err5 := DB.Unscoped().Where("address = ?", updatedToWallet3.Address).Delete(&models.Wallet{}).Error;
+	assert.NoError(t, err5)
 }

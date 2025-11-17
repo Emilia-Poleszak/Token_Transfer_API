@@ -101,7 +101,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	
 	assert.GreaterOrEqual(t, updatedFromWallet.Balance, int32(0), "From wallet balance should not be negative")
 	assert.LessOrEqual(t, updatedFromWallet.Balance, int32(10), "From wallet balance should not exceed initial balance")
-	
+
 	assert.Equal(t, updatedToWallet1.Balance, int32(9), "To wallet 1 balance incorrect")
 	assert.True(t, updatedToWallet2.Balance == int32(10) || updatedToWallet2.Balance == int32(14), "To wallet 2 balance incorrect")
 	assert.True(t, updatedToWallet3.Balance == int32(10) || updatedToWallet3.Balance == int32(17), "To wallet 3 balance incorrect")

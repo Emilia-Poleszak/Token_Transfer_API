@@ -4,18 +4,34 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"os"
+	"fmt"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	
 	"github.com/stretchr/testify/assert"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/graph"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/models"
-	"github.com/Emilia-Poleszak/Token_Transfer_API/db"
 )
 
 func Test_Deadlock_Prevention(t *testing.T) {
-	DB := db.ConnectDB()	
-	if err := DB.AutoMigrate(&models.Wallet{}); err != nil {
-		t.Fatalf("AutoMigrate failed: %v", err)
-	}
+	dbHost := os.Getenv("DB_HOST")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASSWORD")
+	dbName := "tests"
+	dbPort := os.Getenv("DB_PORT")
+
+	dsn := fmt.Sprintf(
+    	"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Warsaw",
+    	dbHost, dbUser, dbPass, dbName, dbPort,
+	)
+	
+	DB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	assert.NoError(t, err, "Failed to connect to database")
+
+	automigrate_err := DB.AutoMigrate(&models.Wallet{})
+	assert.NoError(t, automigrate_err, "AutoMigrate failed")
 	
 	fromWallet := models.Wallet{Address: "0xfrom_address", Balance: int32(10)}
 	toWallet := models.Wallet{Address: "0xto_address", Balance: int32(10)}
@@ -65,8 +81,6 @@ func Test_Deadlock_Prevention(t *testing.T) {
 	assert.Equal(t, int32(10), updatedFromWallet.Balance, "From wallet balance incorrect")
 	assert.Equal(t, int32(10), updatedToWallet.Balance, "To wallet balance incorrect")
 	
-	err2 := DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{}).Error; 
+	err2 := DB.Unscoped().Where("1=1").Delete(&models.Wallet{}).Error 
 	assert.NoError(t, err2)
-	err3 := DB.Unscoped().Where("address = ?", updatedToWallet.Address).Delete(&models.Wallet{}).Error;
-	assert.NoError(t, err3)
 }

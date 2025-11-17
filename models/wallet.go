@@ -4,6 +4,6 @@ import "gorm.io/gorm"
 
 type Wallet struct {
 	gorm.Model
-	Address string `gorm:"primaryKey"`
+	Address string `gorm:"not null"`
 	Balance int32 `gorm:"not null;default:0"`
 }

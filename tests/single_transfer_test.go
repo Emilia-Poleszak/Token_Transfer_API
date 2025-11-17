@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupTestDB(t *testing.T) *gorm.DB {
+func setup_test_DB(t *testing.T) *gorm.DB {
 	DB := db.ConnectDB()
 
 	if err := DB.AutoMigrate(&models.Wallet{}); err != nil {
@@ -22,7 +22,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	return DB
 }
 
-func CreateTestWallets(DB *gorm.DB, t *testing.T) (models.Wallet, models.Wallet) {
+func create_test_wallets(DB *gorm.DB, t *testing.T) (models.Wallet, models.Wallet) {
 	fromWallet := models.Wallet{Address: "0xfrom_address", Balance: int32(800)}
 	toWallet := models.Wallet{Address: "0xto_address", Balance: int32(300)}
 
@@ -32,9 +32,9 @@ func CreateTestWallets(DB *gorm.DB, t *testing.T) (models.Wallet, models.Wallet)
 	return fromWallet, toWallet
 }
 
-func TestSingleAcceptedTransfer(t *testing.T) {
-	DB := setupTestDB(t)
-	fromWallet, toWallet := CreateTestWallets(DB, t)
+func Test_Single_Accepted_Transfer(t *testing.T) {
+	DB := setup_test_DB(t)
+	fromWallet, toWallet := create_test_wallets(DB, t)
 	resolver := &graph.Resolver{DB: DB}
 	amount := int32(100)
 
@@ -58,9 +58,9 @@ func TestSingleAcceptedTransfer(t *testing.T) {
 	assert.NoError(t, err3)
 }	
 
-func TestSingleRejectedTransfer(t *testing.T) {
-	DB := setupTestDB(t)
-	fromWallet, toWallet := CreateTestWallets(DB, t)
+func Test_Single_Rejected_Transfer(t *testing.T) {
+	DB := setup_test_DB(t)
+	fromWallet, toWallet := create_test_wallets(DB, t)
 	resolver := &graph.Resolver{DB: DB}
 	amount := int32(1000)
 

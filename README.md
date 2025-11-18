@@ -51,6 +51,7 @@ mutation {
   )
 }
 ```
+
 For sender wallet make sure to use address that exist in database. 
 If receiver wallet does not exist it will be created 
 with initial balance equal 0.

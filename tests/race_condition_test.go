@@ -4,19 +4,34 @@ import (
 	"context"
 	"sync"
 	"testing"	
+	"os"
+	"fmt"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/graph"
 	"github.com/Emilia-Poleszak/Token_Transfer_API/models"
-	"github.com/Emilia-Poleszak/Token_Transfer_API/db"
 )
 
 func Test_Transfer_Race_Condition(t *testing.T) {
-	DB := db.ConnectDB()
+	dbHost := os.Getenv("DB_HOST")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASSWORD")
+	dbName := "tests"
+	dbPort := os.Getenv("DB_PORT")
 
-	if err := DB.AutoMigrate(&models.Wallet{}); err != nil {
-		t.Fatalf("AutoMigrate failed: %v", err)
-	}
+	dsn := fmt.Sprintf(
+    	"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Warsaw",
+    	dbHost, dbUser, dbPass, dbName, dbPort,
+	)
+	
+	DB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	assert.NoError(t, err, "Failed to connect to database")
+
+	automigrate_err := DB.AutoMigrate(&models.Wallet{})
+	assert.NoError(t, automigrate_err, "AutoMigrate failed")
 
 	fromWallet := models.Wallet{Address: "0xfrom_address", Balance: int32(10)}
 	toWallet1 := models.Wallet{Address: "0xto_address1", Balance: int32(10)}
@@ -51,7 +66,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		if err == nil {
 			result += " +1 accepted,"
 		} else {
-			t.Logf("Error in +1 transfer: %v", err)
+			assert.Contains(t, err.Error(), "Insufficient balance")
 			result += " +1 rejected,"
 		}
 	}()
@@ -67,7 +82,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		if err == nil {
 			result += " -4 accepted,"
 		} else {
-			t.Logf("Error in -4 transfer: %v", err)
+			assert.Contains(t, err.Error(), "Insufficient balance")
 			result += " -4 rejected,"
 		}
 	}()
@@ -82,7 +97,7 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 		if err == nil {
 			result += " -7 accepted,"
 		} else {
-			t.Logf("Error in -7 transfer: %v", err)
+			assert.Contains(t, err.Error(), "Insufficient balance")
 			result += " -7 rejected,"
 		}
 	}()
@@ -106,12 +121,6 @@ func Test_Transfer_Race_Condition(t *testing.T) {
 	assert.True(t, updatedToWallet2.Balance == int32(10) || updatedToWallet2.Balance == int32(14), "To wallet 2 balance incorrect")
 	assert.True(t, updatedToWallet3.Balance == int32(10) || updatedToWallet3.Balance == int32(17), "To wallet 3 balance incorrect")
 
-	err2 := DB.Unscoped().Where("address = ?", updatedFromWallet.Address).Delete(&models.Wallet{}).Error; 
-	assert.NoError(t, err2)
-	err3 := DB.Unscoped().Where("address = ?", updatedToWallet1.Address).Delete(&models.Wallet{}).Error;
-	assert.NoError(t, err3)
-	err4 := DB.Unscoped().Where("address = ?", updatedToWallet2.Address).Delete(&models.Wallet{}).Error;
-	assert.NoError(t, err4)
-	err5 := DB.Unscoped().Where("address = ?", updatedToWallet3.Address).Delete(&models.Wallet{}).Error;
-	assert.NoError(t, err5)
+	err1 := DB.Unscoped().Where("1=1").Delete(&models.Wallet{}).Error 
+	assert.NoError(t, err1)
 }

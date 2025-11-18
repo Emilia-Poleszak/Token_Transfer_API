@@ -23,11 +23,20 @@ func (r *mutationResolver) Transfer(ctx context.Context, from_address string, to
 	}
 
 	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-	
-		var fromWallet, toWallet models.Wallet
+		
+		if (from_address == to_address) {
+			var wallet models.Wallet
+			if err := tx.Where("address = ?", from_address).
+			First(&wallet).Error; err != nil {
+				return fmt.Errorf("Error fetching wallet: %w", err)
+			}
+			from_wallet_balance = wallet.Balance
+			return nil
+		}
+
+		var fromWallet, toWallet, firstWallet, secondWallet models.Wallet
 		first, second := from_address, to_address
 		reversed := false
-		var wallets []models.Wallet
 
 		// Use consistent ordering to prevent deadlocks	
 		if second < first{
@@ -35,33 +44,46 @@ func (r *mutationResolver) Transfer(ctx context.Context, from_address string, to
 			reversed = true
 		} 
 
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("address IN ?", []string{first, second}).
+		if error1 := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("address = ?", first).
 		Order("address").
-		Find(&wallets).Error; err != nil {
-			return fmt.Errorf("Error fetching wallets: %w", err)
-		}
-
-		if reversed {
-			fromWallet, toWallet = wallets[1], wallets[0]
-		} else {
-			fromWallet, toWallet = wallets[0], wallets[1]
-		}
-
-		if errorNotFound := tx.Where("address = ?", from_address).First(&models.Wallet{}).Error; errorNotFound == gorm.ErrRecordNotFound {
-			return fmt.Errorf("From wallet not found")
-		}
-
-		errorNotFound2 := tx.Where("address = ?", to_address).First(&models.Wallet{}).Error
-		
-		if errorNotFound2 == gorm.ErrRecordNotFound {
-			toWallet = models.Wallet{Address: to_address, Balance: 0}
+		First(&firstWallet).Error; error1 != nil {
+			if error1 == gorm.ErrRecordNotFound && reversed { // toWallet not found -> create new
+				toWallet = models.Wallet{Address: first, Balance: 0}
 			
-			if err := tx.Create(&toWallet).Error; err != nil {
-				return fmt.Errorf("Error creating to wallet: %w", err)
+				if err := tx.Create(&toWallet).Error; err != nil {
+					return fmt.Errorf("Error creating to wallet: %w", err)
+				}
+			} else{
+				return fmt.Errorf("Error fetching to wallet: %w", error1)
 			}
-		} else if errorNotFound2 != nil {
-			return fmt.Errorf("Error fetching to wallet: %w", errorNotFound2)
+		} else {
+			if reversed {
+				toWallet = firstWallet
+			} else {
+				fromWallet = firstWallet
+			}
+		}
+		
+		if error2 := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("address = ?", second).
+		Order("address").
+		First(&secondWallet).Error; error2 != nil {
+			if !reversed && error2 == gorm.ErrRecordNotFound {
+				toWallet = models.Wallet{Address: second, Balance: 0}
+			
+				if err := tx.Create(&toWallet).Error; err != nil {
+					return fmt.Errorf("Error creating to wallet: %w", err)
+				}
+			} else {
+				return fmt.Errorf("Error fetching to wallet: %w", error2)
+			}
+		} else {
+			if !reversed {
+				toWallet = secondWallet
+			} else {
+				fromWallet = secondWallet
+			}
 		}
 
 		if fromWallet.Balance < amount {

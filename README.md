@@ -8,7 +8,8 @@ API handles race conditions. Wallet balances cannot go negative.
 
 ### App
 
-To build and start containers open main project directory 
+To build and start containers first make sure to open 
+Docker Desktop. Then open main project directory 
 in termianal and use:
 ```
 docker compose -f docker-compose.yml up --build
@@ -50,6 +51,16 @@ mutation {
   )
 }
 ```
-Make sure to use addresses that exist in database. 
+
+For sender wallet make sure to use address that exist in database. 
+If receiver wallet does not exist it will be created 
+with initial balance equal 0.
 If transfer completes successfully the playground will 
-show updated balance of sender wallet.
+show updated balance of sender wallet, for example:
+```
+{
+  "data": {
+    "transfer": 95
+  }
+}
+```
